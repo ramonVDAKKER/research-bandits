@@ -93,7 +93,7 @@ jobs:
           if terraform show -json tfplan-destroy | jq -r '.resource_changes[] | select(.change.actions[] == "delete") | .address' | grep -E "(database|storage|keyvault)"; then
             echo "⚠️ WARNING: Critical resources detected in destroy plan!"
             echo "Please review the plan carefully before proceeding."
-
+            exit 1
       - name: Terraform Destroy
         id: destroy
         run: terraform apply -auto-approve tfplan-destroy
