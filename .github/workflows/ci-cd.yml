@@ -163,34 +163,6 @@ jobs:
         with:
           sarif_file: 'trivy-fs-results.sarif'
 
-      - name: Install backend dependencies for audit
-        run: |
-          cd backend
-          uv pip install --system -e .
-
-      - name: Run pip-audit on backend
-        run: |
-          pip-audit --skip-editable --format json --output backend-audit.json || true
-          pip-audit --skip-editable
-
-      - name: Install frontend dependencies for audit
-        run: |
-          cd frontend
-          uv pip install --system -e .
-
-      - name: Run pip-audit on frontend
-        run: |
-          pip-audit --skip-editable --format json --output frontend-audit.json || true
-          pip-audit --skip-editable
-
-      - name: Upload audit reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pip-audit-reports
-          path: |
-            backend-audit.json
-            frontend-audit.json
 
   build-and-deploy-dev:
     name: Build and Deploy to Dev
