@@ -98,7 +98,7 @@ module "backend_job" {
   name                         = "caj-${var.project_name}-backend-dev"
   location                     = var.location
   resource_group_name          = azurerm_resource_group.main.name
-  container_apps_environment_id = module.container_apps_environment.id
+  container_app_environment_id = module.container_apps_environment.id
   container_image              = "${module.container_registry.login_server}/research-bandits-backend:latest"
   acr_login_server             = module.container_registry.login_server
   managed_identity_id          = module.container_apps_environment.managed_identity_id
@@ -127,8 +127,8 @@ module "frontend_app" {
   acr_login_server    = module.container_registry.login_server
   managed_identity_id = module.app_service_plan.managed_identity_id
 
-  aad_client_id        = var.aad_client_id
-  aad_tenant_id        = var.aad_tenant_id
+  aad_client_id         = var.aad_client_id
+  aad_tenant_id         = var.aad_tenant_id
   aad_allowed_audiences = var.aad_allowed_audiences
 
   app_settings = merge(
