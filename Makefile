@@ -29,7 +29,7 @@ terraform-plan:
 	@cd infra/environments/dev && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
 		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
-			terraform plan -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]; \
+			terraform plan -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'; \
 		else \
 			terraform plan; \
 		fi
@@ -43,7 +43,7 @@ terraform-apply:
 	@cd infra/environments/dev && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
 		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
-			terraform apply -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]; \
+			terraform apply -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'; \
 		else \
 			terraform apply; \
 		fi
@@ -55,7 +55,7 @@ terraform-destroy:
 	@cd infra/environments/dev && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
 		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
-			terraform destroy -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]; \
+			terraform destroy -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'; \
 		else \
 			terraform destroy; \
 		fi

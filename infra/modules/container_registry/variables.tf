@@ -19,6 +19,11 @@ variable "sku" {
   default     = "Basic"
 }
 
+variable "acr_allowed_ips" {
+  description = "List of IP addresses/CIDR ranges allowed to access ACR (only applies to Premium SKU)"
+  type        = list(string)
+  default     = []
+}
 
 variable "container_apps_identity_principal_id" {
   description = "Principal ID of Container Apps managed identity for ACR pull access"

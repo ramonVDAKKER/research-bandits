@@ -64,10 +64,6 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          # ACR_ALLOWED_IPS secret is set, but acr_allowed_ips variable is not declared in Terraform root module.
-          if [ -n "${{ secrets.ACR_ALLOWED_IPS }}" ]; then
-            echo "⚠️ WARNING: ACR_ALLOWED_IPS is set, but acr_allowed_ips variable is not declared in Terraform root module. Variable will not be passed."
-          fi
           terraform plan -no-color -out=tfplan
           terraform show -no-color tfplan > plan.txt
         env:
@@ -75,6 +71,7 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          TF_VAR_acr_allowed_ips: ${{ secrets.ACR_ALLOWED_IPS }}
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
@@ -195,17 +192,13 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: |
-          # ACR_ALLOWED_IPS is not supported by the root module; do not pass it to Terraform.
-          if [ -n "${{ secrets.ACR_ALLOWED_IPS }}" ]; then
-            echo "⚠️ WARNING: ACR_ALLOWED_IPS is set in secrets but not used in Terraform plan."
-          fi
-          terraform plan -no-color -out=tfplan
+        run: terraform plan -no-color -out=tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          TF_VAR_acr_allowed_ips: ${{ secrets.ACR_ALLOWED_IPS }}
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4

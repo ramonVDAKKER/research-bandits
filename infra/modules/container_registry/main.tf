@@ -15,10 +15,11 @@ resource "azurerm_container_registry" "main" {
     for_each = var.sku == "Premium" && length(var.acr_allowed_ips) > 0 ? [1] : []
     content {
       default_action = "Deny"
-      ip_rule {
-        for ip in var.acr_allowed_ips : {
+      dynamic "ip_rule" {
+        for_each = var.acr_allowed_ips
+        content {
           action   = "Allow"
-          ip_range = ip
+          ip_range = ip_rule.value
         }
       }
     }

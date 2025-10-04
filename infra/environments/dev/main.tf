@@ -83,6 +83,7 @@ module "container_registry" {
   location                             = var.location
   resource_group_name                  = azurerm_resource_group.main.name
   sku                                  = var.acr_sku
+  acr_allowed_ips                      = var.acr_allowed_ips
   container_apps_identity_principal_id = module.container_apps_environment.managed_identity_principal_id
   app_service_identity_principal_id    = module.app_service_plan.managed_identity_principal_id
   github_actions_sp_object_id          = data.azuread_service_principal.github_actions.object_id

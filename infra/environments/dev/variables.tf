@@ -30,11 +30,17 @@ variable "acr_sku" {
   default     = "Basic"
 }
 
+variable "acr_allowed_ips" {
+  description = "List of IP addresses/CIDR ranges allowed to access ACR (only applies to Premium SKU)"
+  type        = list(string)
+  default     = []
+}
+
 # App Service Plan
 variable "app_service_plan_sku" {
-  description = "SKU for App Service Plan (F1 = Free, B1 = Basic)"
+  description = "SKU for App Service Plan (B1 = Basic, minimum for Linux containers)"
   type        = string
-  default     = "F1"
+  default     = "B1"
 }
 
 # GitHub Actions Service Principal
