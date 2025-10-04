@@ -1,0 +1,17 @@
+[project]
+name = "research-bandits"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ramonvdakker", email = "ramon.vdakker@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+research-bandits = "research_bandits:main"
+
+[build-system]
+requires = ["uv_build>=0.8.13,<0.9.0"]
+build-backend = "uv_build"
