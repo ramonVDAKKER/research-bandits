@@ -1,4 +1,4 @@
-.PHONY: lint terraform-init-backend terraform-init terraform-plan terraform-apply terraform-destroy, acr-login-dev
+.PHONY: lint terraform-init-backend terraform-init terraform-plan terraform-apply terraform-destroy acr-login-dev
 
 lint:
 	@echo "Running linter..."
