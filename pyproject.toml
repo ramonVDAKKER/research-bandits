@@ -1,17 +1,30 @@
 [project]
-name = "research-bandits"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    { name = "ramonvdakker", email = "ramon.vdakker@gmail.com" }
-]
+name = "bandit-research-app"
+version = "0.0.1"
+description = "Bandit research workspace"
 requires-python = ">=3.13"
 dependencies = []
 
-[project.scripts]
-research-bandits = "research_bandits:main"
+[tool.uv.workspace]
+members = [
+    "backend",
+    "frontend",
+    "infrastructure"
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pre-commit>=3.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0"
+]
 
 [build-system]
-requires = ["uv_build>=0.8.13,<0.9.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []

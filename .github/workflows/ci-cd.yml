@@ -1,0 +1,373 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  PYTHON_VERSION: '3.13'
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e .
+
+      - name: Run pre-commit hooks
+        run: |
+          uv pip install --system pre-commit
+          pre-commit run --all-files
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install workspace dependencies
+        run: |
+          uv pip install --system -e .
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          uv pip install --system -e .
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          uv pip install --system -e .
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          uv run pytest tests/ -v --cov=src/backend --cov-report=xml --cov-report=term
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          uv run pytest tests/ -v --cov=src/frontend --cov-report=xml --cov-report=term
+
+      - name: Upload backend coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./frontend/coverage.xml
+          flags: frontend
+          name: frontend-coverage
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install security tools
+        run: |
+          uv pip install --system bandit[toml] pip-audit
+
+      - name: Run Bandit
+        run: |
+          bandit -r backend/src frontend/src -f json -o bandit-report.json || true
+          bandit -r backend/src frontend/src
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+
+  build-and-deploy-dev:
+    name: Build and Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: Dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Get Terraform outputs
+        id: terraform-outputs
+        run: |
+          cd infra/environments/dev
+          terraform init
+          RESOURCE_GROUP=$(terraform output -raw resource_group_name)
+          BACKEND_JOB_NAME=$(terraform output -raw backend_job_name)
+          FRONTEND_APP_NAME=$(terraform output -raw frontend_app_name)
+          ACR_NAME=$(terraform output -raw acr_name)
+          ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server)
+          echo "resource_group=$RESOURCE_GROUP" >> $GITHUB_OUTPUT
+          echo "backend_job_name=$BACKEND_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "frontend_app_name=$FRONTEND_APP_NAME" >> $GITHUB_OUTPUT
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+          echo "acr_login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ steps.terraform-outputs.outputs.acr_name }}
+
+      - name: Build and push backend Docker image
+        run: |
+          cd backend
+          docker build -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:${{ env.IMAGE_TAG }} \
+                       -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:dev-latest .
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:${{ env.IMAGE_TAG }}
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:dev-latest
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:${{ env.IMAGE_TAG }}
+          format: 'sarif'
+          output: 'trivy-backend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload backend Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-backend-results.sarif'
+          category: 'backend-image-dev'
+
+      - name: Build and push frontend Docker image
+        run: |
+          cd frontend
+          docker build -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:${{ env.IMAGE_TAG }} \
+                       -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:dev-latest .
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:${{ env.IMAGE_TAG }}
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:dev-latest
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:${{ env.IMAGE_TAG }}
+          format: 'sarif'
+          output: 'trivy-frontend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload frontend Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-frontend-results.sarif'
+          category: 'frontend-image-dev'
+
+      - name: Update Backend Container App Job
+        run: |
+          az containerapp job update \
+            --name ${{ steps.terraform-outputs.outputs.backend_job_name }} \
+            --resource-group ${{ steps.terraform-outputs.outputs.resource_group }} \
+            --image "${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:dev-latest"
+
+      - name: Deploy Frontend to App Service
+        run: |
+          az webapp config container set \
+            --name ${{ steps.terraform-outputs.outputs.frontend_app_name }} \
+            --resource-group ${{ steps.terraform-outputs.outputs.resource_group }} \
+            --docker-custom-image-name "${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:dev-latest" \
+            --docker-registry-server-url "https://${{ steps.terraform-outputs.outputs.acr_login_server }}"
+
+      - name: Restart Frontend App Service
+        run: |
+          az webapp restart \
+            --name ${{ steps.terraform-outputs.outputs.frontend_app_name }} \
+            --resource-group ${{ steps.terraform-outputs.outputs.resource_group }}
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Dev Deployment Complete!"
+          echo "Backend Job: ${{ steps.terraform-outputs.outputs.backend_job_name }}"
+          echo "Frontend URL: https://${{ steps.terraform-outputs.outputs.frontend_app_name }}.azurewebsites.net"
+
+  build-and-deploy-prd:
+    name: Build and Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-deploy-dev
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: Prd
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Get Terraform outputs
+        id: terraform-outputs
+        run: |
+          cd infra/environments/prd
+          terraform init
+          RESOURCE_GROUP=$(terraform output -raw resource_group_name)
+          BACKEND_JOB_NAME=$(terraform output -raw backend_job_name)
+          FRONTEND_APP_NAME=$(terraform output -raw frontend_app_name)
+          ACR_NAME=$(terraform output -raw acr_name)
+          ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server)
+          echo "resource_group=$RESOURCE_GROUP" >> $GITHUB_OUTPUT
+          echo "backend_job_name=$BACKEND_JOB_NAME" >> $GITHUB_OUTPUT
+          echo "frontend_app_name=$FRONTEND_APP_NAME" >> $GITHUB_OUTPUT
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+          echo "acr_login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ steps.terraform-outputs.outputs.acr_name }}
+
+      - name: Build and push backend Docker image
+        run: |
+          cd backend
+          docker build -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:${{ github.sha }} \
+                       -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:prd-latest .
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:${{ github.sha }}
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:prd-latest
+
+      - name: Build and push frontend Docker image
+        run: |
+          cd frontend
+          docker build -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:${{ github.sha }} \
+                       -t ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:prd-latest .
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:${{ github.sha }}
+          docker push ${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:prd-latest
+
+      - name: Update Backend Container App Job
+        run: |
+          az containerapp job update \
+            --name ${{ steps.terraform-outputs.outputs.backend_job_name }} \
+            --resource-group ${{ steps.terraform-outputs.outputs.resource_group }} \
+            --image "${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-backend:prd-latest"
+
+      - name: Deploy Frontend to App Service
+        run: |
+          az webapp config container set \
+            --name ${{ steps.terraform-outputs.outputs.frontend_app_name }} \
+            --resource-group ${{ steps.terraform-outputs.outputs.resource_group }} \
+            --docker-custom-image-name "${{ steps.terraform-outputs.outputs.acr_login_server }}/research-bandits-frontend:prd-latest" \
+            --docker-registry-server-url "https://${{ steps.terraform-outputs.outputs.acr_login_server }}"
+
+      - name: Restart Frontend App Service
+        run: |
+          az webapp restart \
+            --name ${{ steps.terraform-outputs.outputs.frontend_app_name }} \
+            --resource-group ${{ steps.terraform-outputs.outputs.resource_group }}
+
+      - name: Deployment Summary
+        run: |
+          echo "🚀 Production Deployment Complete!"
+          echo "Backend Job: ${{ steps.terraform-outputs.outputs.backend_job_name }}"
+          echo "Frontend URL: https://${{ steps.terraform-outputs.outputs.frontend_app_name }}.azurewebsites.net"

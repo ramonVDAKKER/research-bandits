@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    image: research-bandits-backend
+    volumes:
+      - shared-data:/data
+    environment:
+      - STORAGE_PATH=/data
+    profiles:
+      - manual
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8000:8000"
+    volumes:
+      - shared-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - STORAGE_PATH=/data
+      - BACKEND_IMAGE=research-bandits-backend
+    depends_on:
+      backend:
+        condition: service_completed_successfully
+        required: false
+
+volumes:
+  shared-data:

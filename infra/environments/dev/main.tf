@@ -90,3 +90,57 @@ module "container_registry" {
 
   tags = local.common_tags
 }
+
+# Backend Container App Job (on-demand execution)
+module "backend_job" {
+  source = "../../modules/container_app_job"
+
+  name                         = "caj-${var.project_name}-backend-dev"
+  location                     = var.location
+  resource_group_name          = azurerm_resource_group.main.name
+  container_apps_environment_id = module.container_apps_environment.id
+  container_image              = "${module.container_registry.login_server}/research-bandits-backend:latest"
+  acr_login_server             = module.container_registry.login_server
+  managed_identity_id          = module.container_apps_environment.managed_identity_id
+
+  cpu                        = "0.5"
+  memory                     = "1.0Gi"
+  replica_timeout_in_seconds = 3600
+  replica_retry_limit        = 1
+  parallelism                = 1
+  replica_completion_count   = 1
+
+  environment_variables = var.backend_env_vars
+
+  tags = local.common_tags
+}
+
+# Frontend App Service (Streamlit with Azure AD auth)
+module "frontend_app" {
+  source = "../../modules/app_service"
+
+  name                = "app-${var.project_name}-frontend-dev"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  app_service_plan_id = module.app_service_plan.id
+  container_image     = "research-bandits-frontend:latest"
+  acr_login_server    = module.container_registry.login_server
+  managed_identity_id = module.app_service_plan.managed_identity_id
+
+  aad_client_id        = var.aad_client_id
+  aad_tenant_id        = var.aad_tenant_id
+  aad_allowed_audiences = var.aad_allowed_audiences
+
+  app_settings = merge(
+    var.frontend_app_settings,
+    {
+      "AAD_CLIENT_SECRET" = var.aad_client_secret
+    }
+  )
+
+  always_on          = false # Free tier doesn't support always on
+  health_check_path  = "/_stcore/health"
+  log_retention_days = 7
+
+  tags = local.common_tags
+}

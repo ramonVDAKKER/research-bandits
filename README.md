@@ -157,3 +157,12 @@ A dedicated workflow allows safe destruction of infrastructure through the GitHu
 This pipeline can only be triggered manually and contains some guardrails.
 
 Note: backend storage (i.e. tfstate) is NOT destroyed by this workflow.
+
+### 3.3.2 CI/CD Pipelines for app
+
+The project uses GitHub Actions workflows for:
+1. **Linting** - Code quality checks using pre-commit hooks
+2. **Testing** - Running pytest for both backend and frontend
+3. **Security Scanning** - Vulnerability scanning with Trivy, Bandit, and pip-audit
+4. **Building** - Building Docker images and pushing to Azure Container Registry
+5. **Deployment** - Deploying backend (Container App Job) and frontend (App Service)
