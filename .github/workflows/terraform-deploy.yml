@@ -64,14 +64,20 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          terraform plan -no-color -out=tfplan
+          if [ -n "$ACR_IPS" ]; then
+            # Convert comma-separated IPs to JSON array format
+            IPS_ARRAY=$(echo "$ACR_IPS" | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')
+            terraform plan -no-color -out=tfplan -var="acr_allowed_ips=[$IPS_ARRAY]"
+          else
+            terraform plan -no-color -out=tfplan
+          fi
           terraform show -no-color tfplan > plan.txt
         env:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          TF_VAR_acr_allowed_ips: ${{ secrets.ACR_ALLOWED_IPS }}
+          ACR_IPS: ${{ secrets.ACR_ALLOWED_IPS }}
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
@@ -192,13 +198,20 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -no-color -out=tfplan
+        run: |
+          if [ -n "$ACR_IPS" ]; then
+            # Convert comma-separated IPs to JSON array format
+            IPS_ARRAY=$(echo "$ACR_IPS" | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')
+            terraform plan -no-color -out=tfplan -var="acr_allowed_ips=[$IPS_ARRAY]"
+          else
+            terraform plan -no-color -out=tfplan
+          fi
         env:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          TF_VAR_acr_allowed_ips: ${{ secrets.ACR_ALLOWED_IPS }}
+          ACR_IPS: ${{ secrets.ACR_ALLOWED_IPS }}
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
