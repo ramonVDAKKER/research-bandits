@@ -190,3 +190,51 @@ All Azure resources are tagged with:
 - `Project`: research-bandits
 - `Environment`: dev/prd
 - `ManagedBy`: Terraform
+
+### CI/CD Pipeline
+
+Infrastructure deployments to production are managed via GitHub Actions with automated dev deployments and manual production approvals.
+
+#### Pipeline Flow
+
+```
+PR → main → Dev (auto) → Prd (manual approval required)
+```
+
+**Workflow:**
+1. **Pull Request**: Terraform plan runs and comments on PR (read-only, no secrets)
+2. **Merge to main**: Automatically deploys to dev environment
+3. **Production**: Requires manual approval before deploying to prd
+
+#### Setup GitHub Actions
+
+Complete setup guide: [`.github/SETUP.md`](.github/SETUP.md)
+
+**Quick setup:**
+1. Create Azure Service Principal
+2. Configure GitHub Environments (dev and prd)
+3. Add secrets to each environment:
+   - `AZURE_CREDENTIALS`
+   - `ARM_CLIENT_ID`
+   - `ARM_CLIENT_SECRET`
+   - `ARM_SUBSCRIPTION_ID`
+   - `ARM_TENANT_ID`
+4. Enable required approvers for prd environment
+
+**Security:**
+- ✅ Secrets only accessible from main branch
+- ✅ PR builds cannot access production credentials
+- ✅ Manual approval required for production deployments
+- ✅ Protected main branch prevents unauthorized changes
+
+#### Triggering Deployments
+
+The pipeline runs automatically when:
+- Changes are pushed to `main` branch affecting `infra/**`
+- Pull requests target `main` with changes to `infra/**`
+- Manually triggered via GitHub Actions UI
+
+**Manual trigger:**
+1. Go to **Actions** → **Terraform Deploy**
+2. Click **Run workflow**
+3. Select branch (must be `main` for deployments)
