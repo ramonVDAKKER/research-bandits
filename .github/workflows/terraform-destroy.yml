@@ -94,6 +94,8 @@ jobs:
             echo "⚠️ WARNING: Critical resources detected in destroy plan!"
             echo "Please review the plan carefully before proceeding."
             exit 1
+          fi
+
       - name: Terraform Destroy
         id: destroy
         run: terraform apply -auto-approve tfplan-destroy
@@ -167,6 +169,7 @@ jobs:
             echo "Destroy operation aborted. Please review the plan and remove critical resources before proceeding."
             exit 1
           fi
+
       - name: Terraform Destroy
         id: destroy
         run: terraform apply -auto-approve tfplan-destroy
