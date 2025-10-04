@@ -30,12 +30,6 @@ variable "acr_sku" {
   default     = "Basic"
 }
 
-variable "acr_allowed_ips" {
-  description = "List of allowed IP addresses/CIDR ranges for Container Apps ingress restrictions"
-  type        = list(string)
-  default     = []
-}
-
 # App Service Plan
 variable "app_service_plan_sku" {
   description = "SKU for App Service Plan (F1 = Free, B1 = Basic)"
