@@ -1,22 +1,42 @@
-name: 2. Test
+name: Tests
 
 on:
   workflow_run:
-    workflows: ["1. Lint"]
+    workflows: ["Linting"]
     types:
       - completed
+    branches: [main, feature/*]
   workflow_dispatch:
+  push:
+    branches: [main, feature/*]
+    paths:
+      - 'backend/src/**/*.py'
+      - 'backend/tests/**/*.py'
+      - 'frontend/src/**/*.py'
+      - 'frontend/tests/**/*.py'
+      - '**/pyproject.toml'
 
 permissions:
   contents: read
 
 jobs:
   test:
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    # Simplified condition - run on workflow_dispatch, push, or successful lint
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     name: Run Tests
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug workflow trigger
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Workflow run name: ${{ github.event.workflow_run.name }}"
+          echo "Branch: ${{ github.ref }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -29,6 +49,14 @@ jobs:
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install workspace dependencies
         run: |
