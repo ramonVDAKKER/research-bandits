@@ -13,8 +13,8 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "container_apps_environment_id" {
-  description = "Container Apps Environment ID"
+variable "container_app_environment_id" {
+  description = "Container App Environment ID"
   type        = string
 }
 
