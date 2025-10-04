@@ -15,11 +15,6 @@ terraform-init-backend:
 -include infra/scripts/.env
 export
 
-# Convert comma-separated IPs to Terraform list format
-define TERRAFORM_VARS
-	-var='acr_allowed_ips=$(if $(strip $(ACR_ALLOWED_IPS)),[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')],[])'
-endef
-
 # Terraform Dev Environment
 terraform-init:
 	@echo "Initializing Terraform for dev environment..."
@@ -33,7 +28,11 @@ terraform-plan:
 	fi
 	@cd infra/environments/dev && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
-		terraform plan $(TERRAFORM_VARS)
+		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
+			terraform plan -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]; \
+		else \
+			terraform plan; \
+		fi
 
 terraform-apply:
 	@echo "Applying Terraform changes for dev environment..."
@@ -43,7 +42,11 @@ terraform-apply:
 	fi
 	@cd infra/environments/dev && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
-		terraform apply $(TERRAFORM_VARS)
+		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
+			terraform apply -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]; \
+		else \
+			terraform apply; \
+		fi
 
 terraform-destroy:
 	@echo "⚠️  WARNING: This will destroy all dev infrastructure!"
@@ -51,7 +54,11 @@ terraform-destroy:
 	@echo "Destroying dev infrastructure..."
 	@cd infra/environments/dev && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
-		terraform destroy $(TERRAFORM_VARS)
+		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
+			terraform destroy -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]; \
+		else \
+			terraform destroy; \
+		fi
 
 acr-login-dev:
 	@echo "🔐 Logging into ACR (Dev environment)..."
