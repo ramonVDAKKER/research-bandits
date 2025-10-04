@@ -22,15 +22,12 @@ resource "azurerm_linux_web_app" "main" {
       docker_registry_username = null
       docker_registry_password = null
     }
-
-    health_check_path = var.health_check_path
   }
 
   app_settings = merge(
     var.app_settings,
     {
       "WEBSITES_PORT"                       = "8000"
-      "DOCKER_REGISTRY_SERVER_URL"          = "https://${var.acr_login_server}"
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     }
   )
