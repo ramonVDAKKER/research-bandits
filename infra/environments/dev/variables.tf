@@ -42,5 +42,4 @@ variable "github_actions_sp_name" {
   description = "Display name of the GitHub Actions service principal"
   type        = string
   default     = "sp-github-actions-research-bandits"
-  sensitive   = true
 }
