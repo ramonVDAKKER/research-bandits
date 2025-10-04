@@ -1,0 +1,74 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Frontend (Streamlit)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "${workspaceFolder}/frontend/src/frontend/landing_zone.py",
+                "--server.port=8000"
+            ],
+            "cwd": "${workspaceFolder}/frontend",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/frontend/src",
+                "STORAGE_PATH": "${workspaceFolder}/.dev-data",
+                "BACKEND_IMAGE": "research-bandits-backend"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Backend (Generate Data)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "backend.generate",
+            "args": [
+                "--rows", "1000",
+                "--cols", "10",
+                "--filename", "debug_test",
+                "--storage-path", "${workspaceFolder}/.dev-data",
+                "--overwrite"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "python": "${workspaceFolder}/.venv/bin/python"
+        },
+        {
+            "name": "Backend (Custom Args)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "backend.generate",
+            "args": [
+                "--rows", "100",
+                "--cols", "5",
+                "--storage-path", "${workspaceFolder}/.dev-data"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/src"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "python": "${workspaceFolder}/.venv/bin/python"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Frontend + Backend",
+            "configurations": ["Frontend (Streamlit)", "Backend (Generate Data)"],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "full-stack",
+                "order": 1
+            }
+        }
+    ]
+}

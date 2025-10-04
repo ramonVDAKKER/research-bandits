@@ -49,3 +49,40 @@ variable "github_actions_sp_name" {
   type        = string
   default     = "sp-github-actions-research-bandits"
 }
+
+# Backend Container App Job
+variable "backend_env_vars" {
+  description = "Environment variables for backend job"
+  type        = map(string)
+  default     = {}
+}
+
+# Frontend App Service - Azure AD Authentication
+variable "aad_client_id" {
+  description = "Azure AD application client ID for authentication"
+  type        = string
+  sensitive   = true
+}
+
+variable "aad_tenant_id" {
+  description = "Azure AD tenant ID"
+  type        = string
+}
+
+variable "aad_client_secret" {
+  description = "Azure AD application client secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "aad_allowed_audiences" {
+  description = "Allowed audiences for Azure AD authentication"
+  type        = list(string)
+  default     = []
+}
+
+variable "frontend_app_settings" {
+  description = "Additional app settings for frontend"
+  type        = map(string)
+  default     = {}
+}

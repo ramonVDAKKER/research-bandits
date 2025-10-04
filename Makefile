@@ -1,9 +1,50 @@
-.PHONY: lint terraform-init-backend terraform-init terraform-plan terraform-apply terraform-destroy acr-login-dev
+.PHONY: lint docker-build docker-up docker-down docker-logs docker-restart docker-clean test terraform-init-backend terraform-init terraform-plan terraform-apply terraform-destroy acr-login-dev
 
+# Development commands
 lint:
 	@echo "Running linter..."
-	pre-commit run --all-files
+	uv run --with pre-commit pre-commit run --all-files
 	@echo "Linting complete."
+
+test:
+	@echo "Running tests..."
+	uv run --group dev pytest --cov=src --cov-report=term-missing --cov-report=html
+	@echo "Tests complete."
+
+# Docker Compose commands
+docker-build:
+	@echo "Building Docker images..."
+	docker-compose build
+	@echo "Build complete."
+
+docker-up:
+	@echo "Starting services..."
+	docker-compose up -d
+	@echo "Services started. Frontend: http://localhost:8000"
+
+docker-down:
+	@echo "Stopping services..."
+	docker-compose down
+	@echo "Services stopped."
+
+docker-logs:
+	@echo "Showing logs..."
+	docker-compose logs -f
+
+docker-restart: docker-down docker-build docker-up
+	@echo "Services restarted."
+
+docker-clean:
+	@echo "Cleaning up Docker resources..."
+	docker-compose down -v
+	docker system prune -f
+	@echo "Cleanup complete."
+
+# Run backend batch job manually
+docker-run-backend:
+	@echo "Running backend batch job..."
+	docker run --rm -v research-bandits_shared-data:/data research-bandits-backend --rows 1000 --cols 10
+	@echo "Batch job complete."
 
 # Create Terraform backend (creates storage accounts for both dev and prd)
 terraform-init-backend:
