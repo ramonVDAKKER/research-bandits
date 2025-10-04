@@ -17,7 +17,7 @@ export
 
 # Convert comma-separated IPs to Terraform list format
 define TERRAFORM_VARS
-	-var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'
+	-var='acr_allowed_ips=$(if $(strip $(ACR_ALLOWED_IPS)),[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')],[])'
 endef
 
 # Terraform Dev Environment
