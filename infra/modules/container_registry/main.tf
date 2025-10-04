@@ -7,9 +7,22 @@ resource "azurerm_container_registry" "main" {
 
   # Network rules only supported on Premium SKU
   # Basic SKU: Access controlled via Azure RBAC (managed identities + service principal)
-  public_network_access_enabled = true
+  public_network_access_enabled = var.sku == "Premium" && length(var.acr_allowed_ips) > 0 ? false : true
 
   tags = var.tags
+
+  dynamic "network_rule_set" {
+    for_each = var.sku == "Premium" && length(var.acr_allowed_ips) > 0 ? [1] : []
+    content {
+      default_action = "Deny"
+      ip_rule {
+        for ip in var.acr_allowed_ips : {
+          action   = "Allow"
+          ip_range = ip
+        }
+      }
+    }
+  }
 }
 
 # Role assignment for Container Apps managed identity
