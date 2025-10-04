@@ -1,4 +1,4 @@
-.PHONY: lint docker-build docker-up docker-down docker-logs docker-restart docker-clean test terraform-init-backend terraform-init terraform-plan terraform-apply terraform-destroy acr-login-dev
+.PHONY: lint docker-build docker-up docker-down docker-logs docker-restart docker-clean test terraform-init-backend terraform-init terraform-plan terraform-apply terraform-destroy terraform-unlock acr-login-dev aad-create-dev aad-create-prd
 
 # Development commands
 lint:
@@ -101,6 +101,7 @@ terraform-destroy:
 			terraform destroy; \
 		fi
 
+
 acr-login-dev:
 	@echo "🔐 Logging into ACR (Dev environment)..."
 	@cd infra/environments/dev && \
@@ -112,3 +113,14 @@ acr-login-dev:
 	echo "📋 ACR Name: $$ACR_NAME" && \
 	az acr login --name $$ACR_NAME && \
 	echo "✅ Successfully logged into ACR: $$ACR_NAME"
+
+# Azure AD App Registration
+aad-create-dev:
+	@echo "🔐 Creating Azure AD App Registration for Dev environment..."
+	@chmod +x infra/scripts/create-aad-app-registration.sh
+	@bash infra/scripts/create-aad-app-registration.sh dev
+
+aad-create-prd:
+	@echo "🔐 Creating Azure AD App Registration for Prd environment..."
+	@chmod +x infra/scripts/create-aad-app-registration.sh
+	@bash infra/scripts/create-aad-app-registration.sh prd

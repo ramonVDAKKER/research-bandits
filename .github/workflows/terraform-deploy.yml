@@ -78,6 +78,9 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
           ACR_IPS: ${{ secrets.ACR_ALLOWED_IPS }}
+          TF_VAR_aad_client_id: ${{ secrets.AAD_CLIENT_ID }}
+          TF_VAR_aad_tenant_id: ${{ secrets.AAD_TENANT_ID }}
+          TF_VAR_aad_client_secret: ${{ secrets.AAD_CLIENT_SECRET }}
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
@@ -160,6 +163,9 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          TF_VAR_aad_client_id: ${{ secrets.AAD_CLIENT_ID }}
+          TF_VAR_aad_tenant_id: ${{ secrets.AAD_TENANT_ID }}
+          TF_VAR_aad_client_secret: ${{ secrets.AAD_CLIENT_SECRET }}
 
   terraform-plan-prd:
     name: Plan (Prd)
@@ -212,6 +218,9 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
           ACR_IPS: ${{ secrets.ACR_ALLOWED_IPS }}
+          TF_VAR_aad_client_id: ${{ secrets.AAD_CLIENT_ID }}
+          TF_VAR_aad_tenant_id: ${{ secrets.AAD_TENANT_ID }}
+          TF_VAR_aad_client_secret: ${{ secrets.AAD_CLIENT_SECRET }}
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
@@ -266,3 +275,6 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          TF_VAR_aad_client_id: ${{ secrets.AAD_CLIENT_ID }}
+          TF_VAR_aad_tenant_id: ${{ secrets.AAD_TENANT_ID }}
+          TF_VAR_aad_client_secret: ${{ secrets.AAD_CLIENT_SECRET }}
