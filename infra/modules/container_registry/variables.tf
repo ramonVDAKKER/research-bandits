@@ -34,7 +34,6 @@ variable "github_actions_sp_object_id" {
   description = "Object ID of GitHub Actions service principal for ACR push access"
   type        = string
   default     = null
-  sensitive   = true
 }
 
 variable "tags" {
