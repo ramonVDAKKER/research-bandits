@@ -64,14 +64,11 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          # Convert comma-separated IPs to Terraform list format
+          # ACR_ALLOWED_IPS secret is set, but acr_allowed_ips variable is not declared in Terraform root module.
           if [ -n "${{ secrets.ACR_ALLOWED_IPS }}" ]; then
-            IPS=$(echo "${{ secrets.ACR_ALLOWED_IPS }}" | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')
-            terraform plan -no-color -out=tfplan -var="acr_allowed_ips=[$IPS]"
-          else
-            echo "⚠️ WARNING: ACR_ALLOWED_IPS not set in secrets"
-            terraform plan -no-color -out=tfplan
+            echo "⚠️ WARNING: ACR_ALLOWED_IPS is set, but acr_allowed_ips variable is not declared in Terraform root module. Variable will not be passed."
           fi
+          terraform plan -no-color -out=tfplan
           terraform show -no-color tfplan > plan.txt
         env:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -199,14 +196,11 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          # Convert comma-separated IPs to Terraform list format
+          # ACR_ALLOWED_IPS is not supported by the root module; do not pass it to Terraform.
           if [ -n "${{ secrets.ACR_ALLOWED_IPS }}" ]; then
-            IPS=$(echo "${{ secrets.ACR_ALLOWED_IPS }}" | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$/"/')
-            terraform plan -no-color -out=tfplan -var="acr_allowed_ips=[$IPS]"
-          else
-            echo "⚠️ WARNING: ACR_ALLOWED_IPS not set in secrets"
-            terraform plan -no-color -out=tfplan
+            echo "⚠️ WARNING: ACR_ALLOWED_IPS is set in secrets but not used in Terraform plan."
           fi
+          terraform plan -no-color -out=tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
