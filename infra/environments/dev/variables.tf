@@ -38,9 +38,9 @@ variable "acr_allowed_ips" {
 
 # App Service Plan
 variable "app_service_plan_sku" {
-  description = "SKU for App Service Plan (B1 = Basic, minimum for Linux containers)"
+  description = "SKU for App Service Plan (F1 = Free, B1 = Basic)"
   type        = string
-  default     = "B1"
+  default     = "F1"
 }
 
 # GitHub Actions Service Principal

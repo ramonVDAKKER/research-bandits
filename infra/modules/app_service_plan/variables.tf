@@ -14,13 +14,13 @@ variable "resource_group_name" {
 }
 
 variable "sku_name" {
-  description = "SKU for App Service Plan (B1+ required for Linux + custom containers)"
+  description = "SKU for App Service Plan (F1, B1-B3, S1-S3, P1v2-P3v3, etc.)"
   type        = string
-  default     = "B1"
+  default     = "F1"
 
   validation {
-    condition     = can(regex("^(B[1-3]|S[1-3]|P[1-3]v[23]|I[1-3]v2|WS[1-3])$", var.sku_name))
-    error_message = "sku_name must be B1 or higher (B1-B3, S1-S3, P1v2-P3v3, I1v2-I3v2, WS1-WS3) for Linux App Service with custom containers. F1 is not supported."
+    condition     = can(regex("^(F1|B[1-3]|S[1-3]|P[1-3]v[23]|I[1-3]v2|WS[1-3])$", var.sku_name))
+    error_message = "sku_name must be a valid App Service Plan SKU (F1, B1-B3, S1-S3, P1v2-P3v3, I1v2-I3v2, WS1-WS3)."
   }
 }
 
