@@ -12,8 +12,8 @@ members = [
     "infrastructure"
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pre-commit>=3.0.0",
@@ -21,3 +21,10 @@ dev-dependencies = [
     "ruff>=0.1.0",
     "mypy>=1.0.0"
 ]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []
