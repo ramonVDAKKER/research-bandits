@@ -1,0 +1,186 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment(s) to destroy'
+        required: true
+        type: choice
+        options:
+          - Dev
+          - Prd
+          - Both
+      confirm:
+        description: 'Type "DESTROY" to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TERRAFORM_VERSION: "1.13"
+
+jobs:
+  validate-confirmation:
+    name: Validate Confirmation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "DESTROY" ]; then
+            echo "❌ Confirmation failed. You must type 'DESTROY' to proceed."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Safety delay
+        run: |
+          echo "⏳ Waiting 30 seconds before proceeding with destruction..."
+          sleep 30
+
+  terraform-destroy-dev:
+    name: Destroy (Dev) 🔥
+    runs-on: ubuntu-latest
+    needs: validate-confirmation
+    if: github.event.inputs.environment == 'Dev' || github.event.inputs.environment == 'Both'
+    environment:
+      name: Dev
+    defaults:
+      run:
+        working-directory: infra/environments/dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Plan Destroy
+        id: plan
+        run: |
+          terraform plan -destroy -no-color -out=tfplan-destroy
+          terraform show -no-color tfplan-destroy > plan-destroy.txt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Display Destroy Plan
+        run: cat plan-destroy.txt
+
+      - name: Check for protected resources
+        run: |
+          # Check if any resources have deletion protection
+          if terraform show -json tfplan-destroy | jq -r '.resource_changes[] | select(.change.actions[] == "delete") | .address' | grep -E "(database|storage|keyvault)"; then
+            echo "⚠️ WARNING: Critical resources detected in destroy plan!"
+            echo "Please review the plan carefully before proceeding."
+            exit 1
+      - name: Terraform Destroy
+        id: destroy
+        run: terraform apply -auto-approve tfplan-destroy
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        continue-on-error: true
+
+      - name: Check destroy status
+        run: |
+          if [ "${{ steps.destroy.outcome }}" != "success" ]; then
+            echo "❌ Destroy failed. Please check the logs and manual cleanup may be required."
+            exit 1
+          fi
+          echo "✅ Destroy completed successfully"
+
+  terraform-destroy-prd:
+    name: Destroy (Prd) 🔥
+    runs-on: ubuntu-latest
+    needs: validate-confirmation
+    if: github.event.inputs.environment == 'Prd' || github.event.inputs.environment == 'Both'
+    environment:
+      name: Prd
+    defaults:
+      run:
+        working-directory: infra/environments/prd
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Plan Destroy
+        id: plan
+        run: |
+          terraform plan -destroy -no-color -out=tfplan-destroy
+          terraform show -no-color tfplan-destroy > plan-destroy.txt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Display Destroy Plan
+        run: cat plan-destroy.txt
+
+      - name: Check for protected resources
+        run: |
+          # Check if any resources have deletion protection
+          if terraform show -json tfplan-destroy | jq -r '.resource_changes[] | select(.change.actions[] == "delete") | .address' | grep -E "(database|storage|keyvault)"; then
+            echo "⚠️ WARNING: Critical resources detected in destroy plan!"
+            echo "Destroy operation aborted. Please review the plan and remove critical resources before proceeding."
+            exit 1
+          fi
+      - name: Terraform Destroy
+        id: destroy
+        run: terraform apply -auto-approve tfplan-destroy
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        continue-on-error: true
+
+      - name: Check destroy status
+        run: |
+          if [ "${{ steps.destroy.outcome }}" != "success" ]; then
+            echo "❌ Destroy failed. Please check the logs and manual cleanup may be required."
+            exit 1
+          fi
+          echo "✅ Destroy completed successfully"
