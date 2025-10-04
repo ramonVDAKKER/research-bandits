@@ -8,10 +8,10 @@ terraform {
 }
 
 resource "azurerm_container_app_job" "main" {
-  name                         = var.name
-  location                     = var.location
-  resource_group_name          = var.resource_group_name
-  container_apps_environment_id = var.container_apps_environment_id
+  name                          = var.name
+  location                      = var.location
+  resource_group_name           = var.resource_group_name
+  container_app_environment_id  = var.container_app_environment_id
 
   replica_timeout_in_seconds = var.replica_timeout_in_seconds
   replica_retry_limit        = var.replica_retry_limit
