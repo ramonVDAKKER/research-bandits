@@ -2,6 +2,34 @@
 
 set -e
 
+# Error handling
+cleanup() {
+  if [[ $? -ne 0 ]]; then
+    echo "❌ Script failed. Check the error messages above."
+    echo "💡 You may need to clean up partially created resources manually."
+  fi
+}
+trap cleanup EXIT
+
+# Check Azure CLI
+check_prerequisites() {
+  echo "Checking prerequisites..."
+
+  if ! command -v az &> /dev/null; then
+    echo "❌ Azure CLI is not installed."
+    exit 1
+  fi
+
+  if ! az account show &> /dev/null; then
+    echo "❌ Not logged in to Azure. Run 'az login'."
+    exit 1
+  fi
+
+  echo "✓ Prerequisites met"
+}
+
+check_prerequisites
+
 # Get the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -17,9 +45,8 @@ STORAGE_ACCOUNT_DEV="${STORAGE_ACCOUNT_DEV:-sttfstatebanditsdev}"
 STORAGE_ACCOUNT_PRD="${STORAGE_ACCOUNT_PRD:-sttfstatebanditsprd}"
 CONTAINER_NAME="${CONTAINER_NAME:-tfstate}"
 LOCATION="${LOCATION:-westeurope}"
-ALLOWED_IPS="${ALLOWED_IPS:-}"  # Comma-separated list of IP addresses/CIDR ranges
 
-# Function to create storage account with security settings
+# Function to create storage account
 create_storage_account() {
   local storage_account=$1
   local env_name=$2
@@ -29,7 +56,25 @@ create_storage_account() {
   echo "Creating storage account: $storage_account ($env_name)"
   echo "=========================================="
 
-  # Create storage account with security settings
+  # Check if storage account already exists
+  if az storage account show --name $storage_account --resource-group $RESOURCE_GROUP &>/dev/null; then
+    echo "ℹ️  Storage account $storage_account already exists, skipping creation..."
+
+    # Check if container exists
+    if az storage container show --name $CONTAINER_NAME --account-name $storage_account --auth-mode login &>/dev/null; then
+      echo "ℹ️  Container $CONTAINER_NAME already exists, skipping creation..."
+    else
+      echo "Creating missing container..."
+      az storage container create \
+        --name $CONTAINER_NAME \
+        --account-name $storage_account \
+        --auth-mode login
+      echo "✓ Container '$CONTAINER_NAME' created"
+    fi
+    return
+  fi
+
+  # Create storage account
   az storage account create \
     --resource-group $RESOURCE_GROUP \
     --name $storage_account \
@@ -39,7 +84,7 @@ create_storage_account() {
     --min-tls-version TLS1_2 \
     --allow-blob-public-access false \
     --public-network-access Enabled \
-    --default-action Deny \
+    --default-action Allow \
     --tags Project=research-bandits Environment=$env_name ManagedBy=Terraform
 
   echo "✓ Storage account created with secure defaults"
@@ -56,24 +101,7 @@ create_storage_account() {
 
   echo "✓ Enabled blob versioning and soft delete (30 days retention)"
 
-  # Add IP restrictions if provided
-  if [ -n "$ALLOWED_IPS" ]; then
-    echo "Adding IP restrictions..."
-    IFS=',' read -ra IP_ARRAY <<< "$ALLOWED_IPS"
-    for ip in "${IP_ARRAY[@]}"; do
-      ip=$(echo $ip | xargs)  # Trim whitespace
-      echo "  Adding IP: $ip"
-      az storage account network-rule add \
-        --resource-group $RESOURCE_GROUP \
-        --account-name $storage_account \
-        --ip-address $ip
-    done
-    echo "✓ IP restrictions applied"
-  else
-    echo "⚠ WARNING: No IP restrictions configured. Storage account denies all access by default."
-  fi
-
-  # Allow Azure services to access (required for some Azure services)
+  # Allow Azure services to access
   az storage account update \
     --resource-group $RESOURCE_GROUP \
     --name $storage_account \
@@ -97,13 +125,16 @@ create_storage_account() {
 echo "Creating Terraform backend infrastructure..."
 echo ""
 
-# Create resource group
-az group create \
-  --name $RESOURCE_GROUP \
-  --location $LOCATION \
-  --tags Project=research-bandits ManagedBy=Terraform
-
-echo "✓ Resource group created: $RESOURCE_GROUP"
+# Create resource group (check if exists first)
+if ! az group show --name $RESOURCE_GROUP &>/dev/null; then
+  az group create \
+    --name $RESOURCE_GROUP \
+    --location $LOCATION \
+    --tags Project=research-bandits ManagedBy=Terraform
+  echo "✓ Resource group created: $RESOURCE_GROUP"
+else
+  echo "ℹ️  Resource group $RESOURCE_GROUP already exists, skipping creation..."
+fi
 
 # Create both storage accounts
 create_storage_account $STORAGE_ACCOUNT_DEV "dev"
@@ -118,18 +149,5 @@ echo "Storage accounts created:"
 echo "  - $STORAGE_ACCOUNT_DEV (dev)"
 echo "  - $STORAGE_ACCOUNT_PRD (prd)"
 echo ""
-echo "Security features enabled:"
-echo "  - HTTPS only with TLS 1.2+"
-echo "  - Public blob access disabled"
-echo "  - Network access: deny by default"
-echo "  - Blob versioning enabled"
-echo "  - Soft delete: 30 days retention"
-echo "  - Azure Services bypass enabled"
-echo "  - Common tags applied"
 echo ""
-if [ -z "$ALLOWED_IPS" ]; then
-  echo "⚠ IMPORTANT: Add ALLOWED_IPS to .env file or set as environment variable"
-  echo "  to allow access to the storage accounts!"
-  echo ""
-fi
 echo "Done."
