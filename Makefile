@@ -68,6 +68,7 @@ terraform-plan:
 		echo "ACR will be created with no IP restrictions (not recommended)"; \
 	fi
 	@cd infra/environments/dev && \
+		if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
 		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
 			terraform plan -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'; \
@@ -82,6 +83,7 @@ terraform-apply:
 		echo "ACR will be created with no IP restrictions (not recommended)"; \
 	fi
 	@cd infra/environments/dev && \
+		if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
 		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
 			terraform apply -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'; \
@@ -94,6 +96,7 @@ terraform-destroy:
 	@echo "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
 	@echo "Destroying dev infrastructure..."
 	@cd infra/environments/dev && \
+		if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
 		export ARM_SUBSCRIPTION_ID=$$(az account show --query id -o tsv) && \
 		if [ -n "$(ACR_ALLOWED_IPS)" ]; then \
 			terraform destroy -var='acr_allowed_ips=[$(shell echo $(ACR_ALLOWED_IPS) | sed 's/,/","/g' | sed 's/^/"/' | sed 's/$$/"/')]'; \
