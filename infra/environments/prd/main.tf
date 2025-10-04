@@ -16,7 +16,7 @@ provider "azurerm" {
 
 locals {
   common_tags = {
-    Project     = "research-bandits"
+    Project     = var.project_name
     Environment = "prd"
     ManagedBy   = "Terraform"
   }
