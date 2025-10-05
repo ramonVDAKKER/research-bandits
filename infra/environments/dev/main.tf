@@ -99,7 +99,7 @@ module "backend_job" {
   location                     = var.location
   resource_group_name          = azurerm_resource_group.main.name
   container_app_environment_id = module.container_apps_environment.id
-  container_image              = "${module.container_registry.login_server}/research-bandits-backend:latest"
+  container_image              = var.backend_image
   acr_login_server             = module.container_registry.login_server
   managed_identity_id          = module.container_apps_environment.managed_identity_id
 
@@ -123,7 +123,7 @@ module "frontend_app" {
   location            = var.location
   resource_group_name = azurerm_resource_group.main.name
   app_service_plan_id = module.app_service_plan.id
-  container_image     = "research-bandits-frontend:latest"
+  container_image     = var.frontend_image
   acr_login_server    = module.container_registry.login_server
   managed_identity_id = module.app_service_plan.managed_identity_id
 
@@ -139,7 +139,6 @@ module "frontend_app" {
   )
 
   always_on          = false # Free tier doesn't support always on
-  health_check_path  = "/_stcore/health"
   log_retention_days = 7
 
   tags = local.common_tags

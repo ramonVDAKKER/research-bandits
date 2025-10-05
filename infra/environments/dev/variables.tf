@@ -57,6 +57,19 @@ variable "backend_env_vars" {
   default     = {}
 }
 
+variable "backend_image" {
+  description = "Docker image for backend job (use placeholder during initial setup, CI/CD will update)"
+  type        = string
+  default     = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+}
+
+# Frontend App Service
+variable "frontend_image" {
+  description = "Docker image for frontend app (use placeholder during initial setup, CI/CD will update)"
+  type        = string
+  default     = "mcr.microsoft.com/appsvc/staticsite:latest"
+}
+
 # Frontend App Service - Azure AD Authentication
 variable "aad_client_id" {
   description = "Azure AD application client ID for authentication"

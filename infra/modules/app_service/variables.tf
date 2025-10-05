@@ -67,12 +67,6 @@ variable "always_on" {
   default     = false
 }
 
-variable "health_check_path" {
-  description = "Health check path"
-  type        = string
-  default     = "/_stcore/health"
-}
-
 variable "log_retention_days" {
   description = "Log retention in days"
   type        = number
