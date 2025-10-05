@@ -1,9 +1,7 @@
-# Research-bandits
+# Research bandits evaluation
 
 This repository supports the run of Monte Carlo simulation studies for 
-contextual bandits, the storage of the results, and dashboarding to compare and visualize performances.
-
-Currently supported papers:
+contextual bandits, the storage of the results, and dashboarding to compare and visualize performances of selected methods and setups discussed in the following papers:
 - [Valid Post-Contextual Bandit Inference](https://arxiv.org/abs/2505.13897)
 
 ## Quick Start
