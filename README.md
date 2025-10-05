@@ -4,6 +4,8 @@ This repository supports the run of Monte Carlo simulation studies for
 contextual bandits, the storage of the results, and dashboarding to compare and visualize performances of selected methods and setups discussed in the following papers:
 - [Valid Post-Contextual Bandit Inference](https://arxiv.org/abs/2505.13897)
 
+The methods and helpers for the Monte Carlo studies are taken from the package https://github.com/ramonVDAKKER/research-bandits-methods
+
 ## Quick Start
 
 1. **Clone the repository:**
